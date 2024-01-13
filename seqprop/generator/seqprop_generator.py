@@ -160,11 +160,23 @@ class InstanceNormalization(Layer):
 #ST Estimator code adopted from https://r2rt.com/beyond-binary-ternary-and-one-hot-neurons.html
 #See Github https://github.com/spitis/
 
-def st_sampled_softmax(logits):
+def st_sampled_softmax(logits): #called by line cksanjvjhdfs credo
+	#print(f"{logits=}")
+	##logits=tf.Tensor(logits, dtype=float32)
+	#logits=tf.Tensor(logits, dtype=float) #AC
+	#logits=tf.Tensor(logits, dtype=tf.float32) #AC
+	logits1 = tf.cast(logits, tf.float32)
+	#logits1=tf.Tensor(logits, dtype=float)
+	##logits1=tf.Tensor(logits, dtype=tf.float32)
+	print(f"\n\n\n---------------->{logits=} {type(logits)=} \n\n\n")
 	with ops.name_scope("STSampledSoftmax") as namescope :
 		nt_probs = tf.nn.softmax(logits)
 		onehot_dim = logits.get_shape().as_list()[1]
-		sampled_onehot = tf.one_hot(tf.squeeze(tf.multinomial(logits, 1), 1), onehot_dim, 1.0, 0.0)
+                #print(f"\n\n\n\---------------->{logits=} {onehot_dim=}\n\n\n")
+		#sampled_onehot = tf.one_hot(tf.squeeze(tf.compat.v1.distributions.Multinomial(logits, 1), 1), onehot_dim, 1.0, 0.0) #AC orig
+		multinom=tf.compat.v1.distributions.Multinomial(logits1, 1)
+		squeezed=tf.squeeze(multinom, 1)
+		sampled_onehot = tf.one_hot(squeezed, onehot_dim, 1.0, 0.0) 
 		with tf.get_default_graph().gradient_override_map({'Ceil': 'Identity', 'Mul': 'STMul'}):
 			return tf.ceil(sampled_onehot * nt_probs)
 
@@ -184,7 +196,7 @@ def st_sampled(logits):
 	with ops.name_scope("STSampled") as namescope :
 		#nt_probs = tf.nn.softmax(logits)
 		onehot_dim = logits.get_shape().as_list()[1]
-		sampled_onehot = tf.one_hot(tf.squeeze(tf.multinomial(logits, 1), 1), onehot_dim, 1.0, 0.0)
+		sampled_onehot = tf.one_hot(tf.squeeze(tf.compat.v1.distributions.Multinomial(logits, 1), 1), onehot_dim, 1.0, 0.0)
 		with tf.get_default_graph().gradient_override_map({'Ceil': 'Identity', 'Mul': 'STMul', 'Softmax' : 'Identity'}):
 			return tf.ceil(sampled_onehot * tf.nn.softmax(logits))
 
@@ -367,7 +379,9 @@ def build_generator(seq_length, n_sequences=1, n_samples=None, sequence_template
 	
 	#Sample proper One-hot coded sequences from PWMs
 	if validation_sample_mode == 'max' :
-		sampled_pwm = Lambda(sample_pwm, name='pwm_sampler')(pwm_logits)
+		#pwm_logits=tf.Tensor(pwm_logits, dtype=float)
+		#print(f"AC: {pwm_logits.shape=}")
+		sampled_pwm = Lambda(sample_pwm, name='pwm_sampler')(pwm_logits) #cksanjvjhdfs
 	elif validation_sample_mode == 'gumbel' :
 		sampled_pwm = Lambda(sample_gumbel, name='pwm_sampler')(pwm_logits)
 	elif validation_sample_mode == 'simple_sample' :
